@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { CampaignStatus, MailingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import type { MailType, UseType } from "@/server/modules/fulfillment/provider";
 import {
   markCampaignDispatchFailed,
   recalculateCampaignCounts,
@@ -41,6 +42,14 @@ export async function processCampaignDispatch(campaignId: string) {
       editorState: renderBundle.surfaces.back?.editorState ?? null,
     });
 
+    // Resolve mail type and send date from campaign settings.
+    // Lob does not support usps_standard for 4x6 postcards.
+    const mailType: MailType = campaign.mailType === "usps_standard"
+      ? "usps_standard"
+      : "usps_first_class";
+    const useType: UseType = "marketing";
+    const sendDate = campaign.scheduledAt ?? campaign.arriveByDate ?? null;
+
     await prisma.campaign.update({
       where: {
         id: campaign.id,
@@ -75,6 +84,9 @@ export async function processCampaignDispatch(campaignId: string) {
           sizeCode: renderBundle.template.sizeCode,
           frontHtml,
           backHtml,
+          mailType,
+          useType,
+          sendDate,
           recipient: {
             name: mailing.contact.fullName || "Current Resident",
             addressLine1: mailing.contact.addressLine1,

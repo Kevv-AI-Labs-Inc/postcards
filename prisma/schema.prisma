@@ -212,6 +212,7 @@ model Campaign {
   arriveByDate          DateTime?
   currency              String                @default("USD")
   unitPriceCents        Int                   @default(0)
+  mailType              String                @default("usps_first_class")
   subtotalCents         Int                   @default(0)
   serviceFeeCents       Int                   @default(0)
   totalCents            Int                   @default(0)
