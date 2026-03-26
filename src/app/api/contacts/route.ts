@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getCurrentUserFromSessionToken } from "@/lib/auth/server";
+import { getApiUser } from "@/lib/auth/server";
 import {
   createManualContact,
   loadContactWorkspace,
@@ -18,9 +18,7 @@ const manualContactSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const user = await getCurrentUserFromSessionToken(
-    request.cookies.get("postcard_session")?.value,
-  );
+  const user = await getApiUser(request);
 
   if (!user) {
     return NextResponse.json(
@@ -53,9 +51,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUserFromSessionToken(
-    request.cookies.get("postcard_session")?.value,
-  );
+  const user = await getApiUser(request);
 
   if (!user) {
     return NextResponse.json(

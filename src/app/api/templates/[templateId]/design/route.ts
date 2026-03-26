@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getCurrentUserFromSessionToken } from "@/lib/auth/server";
+import { getApiUser } from "@/lib/auth/server";
 import {
   getTemplateEditorBundle,
   saveTemplateDesignForUser,
@@ -20,9 +20,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ templateId: string }> },
 ) {
-  const user = await getCurrentUserFromSessionToken(
-    request.cookies.get("postcard_session")?.value,
-  );
+  const user = await getApiUser(request);
 
   if (!user) {
     return NextResponse.json({ ok: false, message: "Authentication required." }, { status: 401 });
@@ -41,9 +39,7 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ templateId: string }> },
 ) {
-  const user = await getCurrentUserFromSessionToken(
-    request.cookies.get("postcard_session")?.value,
-  );
+  const user = await getApiUser(request);
 
   if (!user) {
     return NextResponse.json({ ok: false, message: "Authentication required." }, { status: 401 });

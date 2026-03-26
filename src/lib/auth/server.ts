@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { User } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { NextRequest } from "next/server";
 import { Resend } from "resend";
 
 import { env } from "@/lib/env";
@@ -278,6 +279,19 @@ export async function getCurrentUserFromSessionToken(rawSessionToken?: string | 
   }
 
   return session.user;
+}
+
+/**
+ * For use in API route handlers (where `cookies()` from next/headers is not available).
+ * In dev mode it returns the seed user; in production it resolves from the session cookie.
+ */
+export async function getApiUser(request: NextRequest) {
+  if (isDevMode()) {
+    return getOrCreateDevUser();
+  }
+
+  const rawSessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  return getCurrentUserFromSessionToken(rawSessionToken);
 }
 
 /**

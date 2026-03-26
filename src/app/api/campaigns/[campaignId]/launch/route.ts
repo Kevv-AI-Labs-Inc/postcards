@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getCurrentUserFromSessionToken } from "@/lib/auth/server";
+import { getApiUser } from "@/lib/auth/server";
 import { launchCampaign } from "@/server/modules/campaigns/service";
 
 const launchSchema = z.object({
@@ -13,9 +13,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ campaignId: string }> },
 ) {
-  const user = await getCurrentUserFromSessionToken(
-    request.cookies.get("postcard_session")?.value,
-  );
+  const user = await getApiUser(request);
 
   if (!user) {
     return NextResponse.json({ ok: false, message: "Authentication required." }, { status: 401 });
