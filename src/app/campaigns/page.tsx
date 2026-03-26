@@ -25,12 +25,12 @@ export default async function CampaignsPage() {
     const [campaignList, contactWorkspace, templateLibrary] = await Promise.all([
       listCampaignBoardItems(user.id),
       loadContactWorkspace(user.id),
-      listTemplateLibrary(),
+      listTemplateLibrary(user.id),
     ]);
 
     campaigns = campaignList;
     contacts = contactWorkspace.contacts;
-    templates = templateLibrary.filter((template) => template.isSeeded);
+    templates = templateLibrary;
   } catch {
     databaseWarning =
       "Database is not initialized yet. Seed templates and create contacts before drafting campaigns.";

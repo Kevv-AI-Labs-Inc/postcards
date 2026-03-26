@@ -118,6 +118,71 @@ export function getContactImportSteps() {
   return importSteps;
 }
 
+export async function createManualContact(input: {
+  userId: string;
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  tags?: string[];
+}) {
+  const validation = await validatePostalAddress({
+    addressLine1: input.addressLine1,
+    addressLine2: input.addressLine2,
+    city: input.city,
+    state: input.state,
+    postalCode: input.postalCode,
+  });
+  const normalizedAddress = validation.normalizedAddress as Record<string, unknown>;
+
+  const contact = await prisma.contact.create({
+    data: {
+      userId: input.userId,
+      source: "MANUAL",
+      fullName: input.fullName,
+      addressLine1:
+        typeof normalizedAddress.primary_line === "string"
+          ? normalizedAddress.primary_line
+          : input.addressLine1,
+      addressLine2:
+        typeof normalizedAddress.secondary_line === "string"
+          ? normalizedAddress.secondary_line
+          : input.addressLine2,
+      city:
+        typeof normalizedAddress.city === "string"
+          ? normalizedAddress.city
+          : input.city,
+      state:
+        typeof normalizedAddress.state === "string"
+          ? normalizedAddress.state
+          : input.state,
+      postalCode:
+        typeof normalizedAddress.zip_code === "string"
+          ? normalizedAddress.zip_code
+          : input.postalCode,
+      addressVerified: validation.isDeliverable,
+      addressVerifiedAt: validation.isDeliverable ? new Date() : null,
+      validationSummary: validation.summary,
+      tags: input.tags ?? [],
+    },
+  });
+
+  await prisma.addressValidation.create({
+    data: {
+      contactId: contact.id,
+      provider: validation.provider,
+      isDeliverable: validation.isDeliverable,
+      analysisSummary: validation.summary,
+      normalizedAddress: validation.normalizedAddress,
+      providerPayload: validation.providerPayload,
+    },
+  });
+
+  return contact;
+}
+
 export async function loadContactWorkspace(userId: string): Promise<ContactWorkspace> {
   const contacts = await prisma.contact.findMany({
     where: {

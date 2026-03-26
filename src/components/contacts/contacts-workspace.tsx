@@ -39,6 +39,14 @@ export function ContactsWorkspace({
     verifiedContacts,
   });
   const [message, setMessage] = useState<string | null>(null);
+  const [manualContact, setManualContact] = useState({
+    fullName: "",
+    addressLine1: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    tags: "",
+  });
   const [isPending, startTransition] = useTransition();
 
   const verifiedRatio = useMemo(() => {
@@ -84,6 +92,45 @@ export function ContactsWorkspace({
       setMessage(payload.message ?? "Import finished.");
 
       if (payload.ok) {
+        await refreshContacts();
+      }
+    });
+  }
+
+  function handleCreateManualContact() {
+    startTransition(async () => {
+      setMessage(null);
+
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: manualContact.fullName,
+          addressLine1: manualContact.addressLine1,
+          city: manualContact.city,
+          state: manualContact.state,
+          postalCode: manualContact.postalCode,
+          tags: manualContact.tags
+            .split(/[|,;]/)
+            .map((item) => item.trim())
+            .filter(Boolean),
+        }),
+      });
+
+      const payload = (await response.json()) as ContactsResponse;
+      setMessage(payload.message ?? "Contact created.");
+
+      if (payload.ok) {
+        setManualContact({
+          fullName: "",
+          addressLine1: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          tags: "",
+        });
         await refreshContacts();
       }
     });
@@ -176,6 +223,74 @@ export function ContactsWorkspace({
 
         <article className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_24px_80px_-56px_rgba(70,49,14,0.5)]">
           <p className="text-xs uppercase tracking-[0.25em] text-stone-500">
+            Manual Contact
+          </p>
+          <div className="mt-5 grid gap-3">
+            <input
+              value={manualContact.fullName}
+              onChange={(event) =>
+                setManualContact((current) => ({ ...current, fullName: event.target.value }))
+              }
+              placeholder="Full name"
+              className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+            />
+            <input
+              value={manualContact.addressLine1}
+              onChange={(event) =>
+                setManualContact((current) => ({ ...current, addressLine1: event.target.value }))
+              }
+              placeholder="Address line 1"
+              className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+            />
+            <div className="grid gap-3 md:grid-cols-3">
+              <input
+                value={manualContact.city}
+                onChange={(event) =>
+                  setManualContact((current) => ({ ...current, city: event.target.value }))
+                }
+                placeholder="City"
+                className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+              />
+              <input
+                value={manualContact.state}
+                onChange={(event) =>
+                  setManualContact((current) => ({ ...current, state: event.target.value.toUpperCase() }))
+                }
+                placeholder="State"
+                maxLength={2}
+                className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+              />
+              <input
+                value={manualContact.postalCode}
+                onChange={(event) =>
+                  setManualContact((current) => ({ ...current, postalCode: event.target.value }))
+                }
+                placeholder="ZIP"
+                className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+              />
+            </div>
+            <input
+              value={manualContact.tags}
+              onChange={(event) =>
+                setManualContact((current) => ({ ...current, tags: event.target.value }))
+              }
+              placeholder="Tags separated by commas"
+              className="rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+            />
+            <button
+              type="button"
+              onClick={handleCreateManualContact}
+              disabled={isPending}
+              className="inline-flex items-center justify-center rounded-full border border-stone-900/10 px-5 py-3 text-sm font-medium text-stone-800 transition hover:bg-stone-950 hover:text-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? "Saving..." : "Add Manual Contact"}
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_24px_80px_-56px_rgba(70,49,14,0.5)]">
+          <p className="text-xs uppercase tracking-[0.25em] text-stone-500">
             Recent Contacts
           </p>
           <div className="mt-5 space-y-3">
@@ -215,9 +330,7 @@ export function ContactsWorkspace({
               </div>
             )}
           </div>
-        </article>
       </section>
     </div>
   );
 }
-

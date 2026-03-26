@@ -8,6 +8,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/auth/verify",
   "/api/health",
   "/api/bootstrap",
+  "/api/webhooks/lob",
 ];
 
 function isPublicPath(pathname: string) {

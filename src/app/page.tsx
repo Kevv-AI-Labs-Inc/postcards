@@ -4,7 +4,7 @@ import { getDashboardSnapshot } from "@/server/modules/dashboard/service";
 
 export default async function HomePage() {
   const user = await requireCurrentUser();
-  const snapshot = getDashboardSnapshot();
+  const snapshot = await getDashboardSnapshot(user.id);
 
   return (
     <AppShell
@@ -73,6 +73,18 @@ export default async function HomePage() {
             ))}
           </div>
         </article>
+      </section>
+
+      <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_24px_80px_-56px_rgba(70,49,14,0.5)]">
+        <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Recent Activity</p>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {snapshot.activity.map((item) => (
+            <div key={item.title} className="rounded-[1.25rem] border border-stone-900/10 p-4">
+              <p className="font-medium text-stone-950">{item.title}</p>
+              <p className="mt-2 text-sm leading-7 text-stone-600">{item.detail}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </AppShell>
   );

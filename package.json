@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "tsx src/worker.ts",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -17,6 +18,7 @@
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "bullmq": "^5.34.10",
+    "fabric": "^6.9.0",
     "ioredis": "^5.4.2",
     "next": "^15.0.0",
     "papaparse": "^5.5.3",

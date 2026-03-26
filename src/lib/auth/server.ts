@@ -1,5 +1,3 @@
-import "server-only";
-
 import crypto from "node:crypto";
 
 import type { User } from "@prisma/client";
@@ -30,6 +28,7 @@ type MagicLinkIssueInput = {
   nextPath?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
+  appUrl?: string | null;
 };
 
 type VerifiedSession = {
@@ -126,7 +125,10 @@ export async function issueMagicLink(input: MagicLinkIssueInput) {
     },
   });
 
-  const verificationUrl = new URL("/api/auth/verify", env.NEXT_PUBLIC_APP_URL);
+  const verificationUrl = new URL(
+    "/api/auth/verify",
+    input.appUrl?.trim() || env.NEXT_PUBLIC_APP_URL,
+  );
   verificationUrl.searchParams.set("token", rawToken);
   verificationUrl.searchParams.set("next", nextPath);
 

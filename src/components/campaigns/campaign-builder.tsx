@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import type { CampaignBoardItem } from "@/server/modules/campaigns/service";
 import type { ContactListItem } from "@/server/modules/contacts/service";
@@ -31,12 +31,31 @@ export function CampaignBuilder({
     contacts.filter((contact) => contact.addressVerified).map((contact) => contact.id),
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [launchingCampaignId, setLaunchingCampaignId] = useState<string | null>(null);
+  const [scheduleMode, setScheduleMode] = useState<"SEND_NOW" | "SCHEDULED">("SEND_NOW");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const verifiedContacts = useMemo(
     () => contacts.filter((contact) => contact.addressVerified),
     [contacts],
   );
+
+  useEffect(() => {
+    const hasActiveCampaign = campaigns.some((campaign) =>
+      campaign.status === "processing" || campaign.status === "scheduled",
+    );
+
+    if (!hasActiveCampaign) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshCampaigns();
+    }, 4000);
+
+    return () => window.clearInterval(timer);
+  }, [campaigns]);
 
   function toggleContact(contactId: string) {
     setSelectedContactIds((current) =>
@@ -73,6 +92,32 @@ export function CampaignBuilder({
 
       const payload = (await response.json()) as CampaignResponse;
       setMessage(payload.message);
+
+      if (payload.ok) {
+        await refreshCampaigns();
+      }
+    });
+  }
+
+  function handleLaunchCampaign(campaignId: string) {
+    startTransition(async () => {
+      setMessage(null);
+      setLaunchingCampaignId(campaignId);
+
+      const response = await fetch(`/api/campaigns/${campaignId}/launch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sendStrategy: scheduleMode,
+          scheduledAt: scheduleMode === "SCHEDULED" && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as CampaignResponse;
+      setMessage(payload.message);
+      setLaunchingCampaignId(null);
 
       if (payload.ok) {
         await refreshCampaigns();
@@ -152,6 +197,36 @@ export function CampaignBuilder({
               </div>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-[200px_1fr]">
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.25em] text-stone-500">
+                  Send Mode
+                </span>
+                <select
+                  value={scheduleMode}
+                  onChange={(event) =>
+                    setScheduleMode(event.target.value as "SEND_NOW" | "SCHEDULED")
+                  }
+                  className="mt-2 w-full rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15"
+                >
+                  <option value="SEND_NOW">Send now</option>
+                  <option value="SCHEDULED">Schedule</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.25em] text-stone-500">
+                  Scheduled Time
+                </span>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(event) => setScheduledAt(event.target.value)}
+                  disabled={scheduleMode !== "SCHEDULED"}
+                  className="mt-2 w-full rounded-[1rem] border border-stone-900/10 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15 disabled:opacity-50"
+                />
+              </label>
+            </div>
+
             <button
               type="button"
               onClick={handleCreateCampaign}
@@ -186,10 +261,39 @@ export function CampaignBuilder({
                       {campaign.status}
                     </span>
                   </div>
+                  <p className="mt-2 text-sm text-stone-300">{campaign.templateName}</p>
                   <p className="mt-2 text-sm text-stone-300">{campaign.audience}</p>
+                  <p className="mt-2 text-sm uppercase tracking-[0.2em] text-amber-300">
+                    {campaign.totalPriceLabel}
+                  </p>
                   <p className="mt-2 text-sm leading-6 text-stone-400">
                     {campaign.nextAction}
                   </p>
+                  <p className="mt-2 text-sm leading-6 text-stone-400">
+                    {campaign.deliverySummary}
+                  </p>
+                  {campaign.scheduledAt ? (
+                    <p className="mt-2 text-xs uppercase tracking-[0.2em] text-amber-300">
+                      Scheduled {new Date(campaign.scheduledAt).toLocaleString()}
+                    </p>
+                  ) : null}
+                  {campaign.status === "draft" || campaign.status === "failed" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleLaunchCampaign(campaign.id)}
+                      disabled={
+                        (isPending && launchingCampaignId === campaign.id) ||
+                        (scheduleMode === "SCHEDULED" && !scheduledAt)
+                      }
+                      className="mt-4 inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-stone-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isPending && launchingCampaignId === campaign.id
+                        ? "Queueing..."
+                        : scheduleMode === "SCHEDULED"
+                          ? "Schedule Campaign"
+                          : "Launch Campaign"}
+                    </button>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -203,4 +307,3 @@ export function CampaignBuilder({
     </div>
   );
 }
-

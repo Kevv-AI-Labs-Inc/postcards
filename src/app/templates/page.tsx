@@ -1,10 +1,12 @@
+import Link from "next/link";
+
 import { AppShell } from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/auth/server";
 import { listTemplateLibrary } from "@/server/modules/templates/service";
 
 export default async function TemplatesPage() {
   const user = await requireCurrentUser();
-  const templates = await listTemplateLibrary();
+  const templates = await listTemplateLibrary(user.id);
 
   return (
     <AppShell
@@ -29,8 +31,14 @@ export default async function TemplatesPage() {
               {template.note}
             </p>
             <p className="mt-4 text-xs uppercase tracking-[0.25em] text-stone-400">
-              {template.isSeeded ? "seeded" : "catalog only"}
+              {template.ownerScope}
             </p>
+            <Link
+              href={`/editor?templateId=${template.id}`}
+              className="mt-4 inline-flex items-center rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50"
+            >
+              Open In Editor
+            </Link>
           </article>
         ))}
       </section>

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getRequestIpAddress, getRequestUserAgent } from "@/lib/auth/request";
+import {
+  getRequestAppUrl,
+  getRequestIpAddress,
+  getRequestUserAgent,
+} from "@/lib/auth/request";
 import { AuthError, issueMagicLink } from "@/lib/auth/server";
 
 const requestSchema = z.object({
@@ -18,6 +22,7 @@ export async function POST(request: NextRequest) {
       nextPath: payload.next,
       ipAddress: getRequestIpAddress(request),
       userAgent: getRequestUserAgent(request),
+      appUrl: getRequestAppUrl(request),
     });
 
     return NextResponse.json({
@@ -60,4 +65,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
