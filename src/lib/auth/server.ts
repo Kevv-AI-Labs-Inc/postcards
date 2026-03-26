@@ -280,7 +280,40 @@ export async function getCurrentUserFromSessionToken(rawSessionToken?: string | 
   return session.user;
 }
 
+/**
+ * Dev mode: auto-create and return a seed user so the app works without Magic Link.
+ * Only activates when RESEND_API_KEY is not set.
+ */
+async function getOrCreateDevUser() {
+  const DEV_EMAIL = "dev@postcard.local";
+
+  let user = await prisma.user.findUnique({
+    where: { email: DEV_EMAIL },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: DEV_EMAIL,
+        name: "Dev Agent",
+      },
+    });
+  }
+
+  return user;
+}
+
+function isDevMode() {
+  const key = process.env.RESEND_API_KEY;
+  return !key || key.trim() === "";
+}
+
 export async function getCurrentUser() {
+  // Dev mode bypass: return a seeded user without requiring a session cookie
+  if (isDevMode()) {
+    return getOrCreateDevUser();
+  }
+
   const cookieStore = await cookies();
   const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   return getCurrentUserFromSessionToken(rawSessionToken);
@@ -295,3 +328,4 @@ export async function requireCurrentUser() {
 
   return user;
 }
+
