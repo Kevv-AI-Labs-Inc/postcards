@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum ContactSource {
+  MANUAL
+  CSV_IMPORT
+  FARM_ROUTE
+}
+
+enum TemplateCategory {
+  JUST_LISTED
+  JUST_SOLD
+  OPEN_HOUSE
+  MARKET_UPDATE
+  HOLIDAY
+  AGENT_BRANDING
+  HOME_VALUATION
+  CUSTOM
+}
+
+enum DesignSurface {
+  FRONT
+  BACK
+}
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  SCHEDULED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum CampaignSendStrategy {
+  SEND_NOW
+  SCHEDULED
+  ARRIVE_BY
+}
+
+enum MailingStatus {
+  PENDING
+  VALIDATING
+  READY
+  SUBMITTED
+  MAILED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+  FAILED
+}
+
+enum MailingChannel {
+  POSTCARD
+  LETTER
+}
+
+enum AssetKind {
+  LISTING_IMAGE
+  BRAND_LOGO
+  AGENT_HEADSHOT
+  FONT_FILE
+  EXPORT
+}
+
+enum FulfillmentProvider {
+  LOB
+  LOB_MOCK
+}
+
+enum FulfillmentEventType {
+  CREATED
+  QUEUED
+  SUBMITTED
+  STATUS_SYNCED
+  DELIVERED
+  RETURNED
+  FAILED
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  name           String?
+  phone          String?
+  plan           UserPlan         @default(FREE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  brandProfile   BrandProfile?
+  contacts       Contact[]
+  contactImports ContactImport[]
+  templates      Template[]
+  campaigns      Campaign[]
+  assets         Asset[]
+  sessions       UserSession[]
+}
+
+model BrandProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  displayName      String?
+  brokerageName    String?
+  primaryColor     String?
+  accentColor      String?
+  logoAssetId      String?
+  headshotAssetId  String?
+  websiteUrl       String?
+  phone            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id                 String             @id @default(cuid())
+  userId             String
+  importId           String?
+  source             ContactSource      @default(MANUAL)
+  firstName          String?
+  lastName           String?
+  fullName           String?
+  companyName        String?
+  addressLine1       String
+  addressLine2       String?
+  city               String
+  state              String
+  postalCode         String
+  country            String             @default("US")
+  addressVerified    Boolean            @default(false)
+  addressVerifiedAt  DateTime?
+  validationSummary  String?
+  tags               String[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  import             ContactImport?     @relation(fields: [importId], references: [id], onDelete: SetNull)
+  mailings           Mailing[]
+  validations        AddressValidation[]
+
+  @@index([userId, postalCode])
+  @@index([userId, addressVerified])
+}
+
+model ContactImport {
+  id                String    @id @default(cuid())
+  userId            String
+  filename          String
+  totalRows         Int       @default(0)
+  importedRows      Int       @default(0)
+  failedRows        Int       @default(0)
+  mappingConfig     Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts          Contact[]
+}
+
+model Template {
+  id               String             @id @default(cuid())
+  userId           String?
+  name             String
+  category         TemplateCategory
+  isSystem         Boolean            @default(false)
+  sizeCode         String             @default("4x6")
+  thumbnailUrl     String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  owner            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  designDocuments  DesignDocument[]
+  campaigns        Campaign[]
+}
+
+model DesignDocument {
+  id                  String        @id @default(cuid())
+  templateId          String
+  surface             DesignSurface
+  version             Int           @default(1)
+  editorState         Json
+  renderDefinition    Json?
+  previewAssetId      String?
+  exportAssetId       String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  template            Template      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, surface, version])
+}
+
+model Campaign {
+  id                    String                @id @default(cuid())
+  userId                String
+  templateId            String
+  name                  String
+  status                CampaignStatus        @default(DRAFT)
+  sendStrategy          CampaignSendStrategy  @default(SEND_NOW)
+  scheduledAt           DateTime?
+  arriveByDate          DateTime?
+  currency              String                @default("USD")
+  unitPriceCents        Int                   @default(0)
+  subtotalCents         Int                   @default(0)
+  serviceFeeCents       Int                   @default(0)
+  totalCents            Int                   @default(0)
+  recipientCount        Int                   @default(0)
+  validatedCount        Int                   @default(0)
+  submittedCount        Int                   @default(0)
+  deliveredCount        Int                   @default(0)
+  failedCount           Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  owner                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template              Template              @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  mailings              Mailing[]
+
+  @@index([userId, status])
+  @@index([scheduledAt])
+}
+
+model Mailing {
+  id                    String                @id @default(cuid())
+  campaignId            String
+  contactId             String
+  provider              FulfillmentProvider   @default(LOB)
+  providerReference     String?
+  channel               MailingChannel        @default(POSTCARD)
+  status                MailingStatus         @default(PENDING)
+  costCents             Int                   @default(0)
+  expectedDeliveryAt    DateTime?
+  deliveredAt           DateTime?
+  failureReason         String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  campaign              Campaign              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact               Contact               @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  events                FulfillmentEvent[]
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId, status])
+  @@index([providerReference])
+}
+
+model FulfillmentEvent {
+  id                  String                @id @default(cuid())
+  mailingId           String
+  type                FulfillmentEventType
+  providerPayload     Json?
+  eventTimestamp      DateTime              @default(now())
+  createdAt           DateTime              @default(now())
+  mailing             Mailing               @relation(fields: [mailingId], references: [id], onDelete: Cascade)
+
+  @@index([mailingId, eventTimestamp])
+}
+
+model AddressValidation {
+  id                  String    @id @default(cuid())
+  contactId           String
+  provider            FulfillmentProvider @default(LOB)
+  isDeliverable       Boolean
+  analysisSummary     String?
+  normalizedAddress   Json?
+  providerPayload     Json?
+  createdAt           DateTime  @default(now())
+  contact             Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId, createdAt])
+}
+
+model Asset {
+  id                  String    @id @default(cuid())
+  userId              String
+  kind                AssetKind
+  filename            String
+  mimeType            String
+  byteSize            Int
+  storageKey          String    @unique
+  publicUrl           String?
+  metadata            Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+}
+
+model MagicLinkToken {
+  id                 String    @id @default(cuid())
+  email              String
+  tokenHash          String    @unique
+  redirectTo         String?
+  requestedIp        String?
+  requestedUserAgent String?
+  expiresAt          DateTime
+  consumedAt         DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@index([expiresAt])
+}
+
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String
+  sessionTokenHash String    @unique
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastSeenAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
