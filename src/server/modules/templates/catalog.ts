@@ -52,6 +52,63 @@ export const systemTemplateSeeds: SystemTemplateSeed[] = [
     },
   },
   {
+    slug: "seller-just-sold-authority",
+    name: "Seller Just Sold Authority",
+    category: "JUST_SOLD",
+    sizeCode: "4x6",
+    note: "For nearby owners who need proof of pricing strategy, prep decisions, and interior presentation.",
+    surfaces: {
+      front: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["sold-banner", "headline", "hero-image", "pricing-proof"],
+      },
+      back: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["market-proof", "agent-branding", "qr-cta", "seller-strategy"],
+      },
+    },
+  },
+  {
+    slug: "buyer-just-sold-momentum",
+    name: "Buyer Just Sold Momentum",
+    category: "JUST_SOLD",
+    sizeCode: "4x6",
+    note: "Built to show active buyer demand and why the next seller on the block should pay attention.",
+    surfaces: {
+      front: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["buyer-win", "headline", "hero-image", "demand-signal"],
+      },
+      back: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["interior-preview", "qr-cta", "agent-proof", "contact-cta"],
+      },
+    },
+  },
+  {
+    slug: "open-house-neighbor-follow-up",
+    name: "Open House Neighbor Follow-Up",
+    category: "OPEN_HOUSE",
+    sizeCode: "4x6",
+    note: "Designed for neighbors met around an open house who need fast proof of turnout, feedback, and next-step strategy.",
+    surfaces: {
+      front: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["open-house-recap", "headline", "traffic-metrics", "hero-image"],
+      },
+      back: {
+        version: 1,
+        kind: "fabric-placeholder",
+        blocks: ["buyer-feedback", "qr-cta", "agent-branding", "listing-consult-cta"],
+      },
+    },
+  },
+  {
     slug: "market-update-ledger",
     name: "Market Update Ledger",
     category: "MARKET_UPDATE",

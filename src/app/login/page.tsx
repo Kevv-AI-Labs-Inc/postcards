@@ -4,6 +4,8 @@ import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { AppShell } from "@/components/app-shell";
 import { getCurrentUser } from "@/lib/auth/server";
 
+export const dynamic = "force-dynamic";
+
 type LoginPageProps = {
   searchParams: Promise<{
     next?: string;

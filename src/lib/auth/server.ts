@@ -323,13 +323,14 @@ function isDevMode() {
 }
 
 export async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
   // Dev mode bypass: return a seeded user without requiring a session cookie
   if (isDevMode()) {
     return getOrCreateDevUser();
   }
 
-  const cookieStore = await cookies();
-  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   return getCurrentUserFromSessionToken(rawSessionToken);
 }
 
@@ -342,4 +343,3 @@ export async function requireCurrentUser() {
 
   return user;
 }
-

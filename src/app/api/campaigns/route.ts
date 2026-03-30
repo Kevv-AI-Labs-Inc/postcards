@@ -11,6 +11,9 @@ const createCampaignSchema = z.object({
   name: z.string().min(1).max(120),
   templateId: z.string().min(1),
   contactIds: z.array(z.string().min(1)).min(1),
+  playbookKey: z.string().min(1).max(80).optional(),
+  landingUrl: z.string().url().optional(),
+  qrLabel: z.string().min(1).max(80).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -54,6 +57,9 @@ export async function POST(request: NextRequest) {
       name: payload.name,
       templateId: payload.templateId,
       contactIds: payload.contactIds,
+      playbookKey: payload.playbookKey,
+      landingUrl: payload.landingUrl,
+      qrLabel: payload.qrLabel,
     });
 
     return NextResponse.json({
@@ -66,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Provide a campaign name, template, and at least one contact.",
+          message: "Provide a campaign name, template, audience, and a valid landing link when using QR follow-up.",
         },
         { status: 400 },
       );
@@ -84,4 +90,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

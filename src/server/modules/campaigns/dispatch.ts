@@ -31,15 +31,23 @@ export async function processCampaignDispatch(campaignId: string) {
     }
 
     const renderBundle = await getTemplateRenderBundle(campaign.templateId, campaign.userId);
-    const frontHtml = buildPostcardHtml({
+    const frontHtml = await buildPostcardHtml({
       side: "front",
       renderDefinition: renderBundle.surfaces.front?.renderDefinition ?? null,
       editorState: renderBundle.surfaces.front?.editorState ?? null,
+      campaign: {
+        landingUrl: campaign.landingUrl,
+        qrLabel: campaign.qrLabel,
+      },
     });
-    const backHtml = buildPostcardHtml({
+    const backHtml = await buildPostcardHtml({
       side: "back",
       renderDefinition: renderBundle.surfaces.back?.renderDefinition ?? null,
       editorState: renderBundle.surfaces.back?.editorState ?? null,
+      campaign: {
+        landingUrl: campaign.landingUrl,
+        qrLabel: campaign.qrLabel,
+      },
     });
 
     // Resolve mail type and send date from campaign settings.

@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 
 const navigation: Array<{ href: Route; label: string }> = [
   { href: "/", label: "Dashboard" },
+  { href: "/farming", label: "Farming" },
   { href: "/editor", label: "Editor" },
   { href: "/templates", label: "Templates" },
   { href: "/contacts", label: "Contacts" },

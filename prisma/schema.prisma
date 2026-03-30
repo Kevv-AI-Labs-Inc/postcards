@@ -206,6 +206,9 @@ model Campaign {
   userId                String
   templateId            String
   name                  String
+  playbookKey           String?
+  landingUrl            String?
+  qrLabel               String?
   status                CampaignStatus        @default(DRAFT)
   sendStrategy          CampaignSendStrategy  @default(SEND_NOW)
   scheduledAt           DateTime?

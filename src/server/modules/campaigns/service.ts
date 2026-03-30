@@ -2,6 +2,7 @@ import type { CampaignSendStrategy, Prisma } from "@prisma/client";
 import { CampaignStatus, FulfillmentEventType, MailingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { getPostcardPlaybookByKey } from "@/lib/farming/playbooks";
 import { processCampaignDispatch } from "@/server/modules/campaigns/dispatch";
 import { recalculateCampaignCounts } from "@/server/modules/campaigns/state";
 import { enqueueCampaignDispatch } from "@/server/queue/campaigns";
@@ -15,8 +16,10 @@ export type CampaignBoardItem = {
   nextAction: string;
   scheduledAt: string | null;
   templateName: string;
+  playbookLabel: string | null;
   deliverySummary: string;
   totalPriceLabel: string;
+  landingSummary: string | null;
 };
 
 function mapCampaignStatus(status: CampaignStatus): CampaignBoardItem["status"] {
@@ -56,24 +59,32 @@ export async function listCampaignBoardItems(userId: string) {
     take: 20,
   });
 
-  return campaigns.map((campaign) => ({
-    id: campaign.id,
-    name: campaign.name,
-    status: mapCampaignStatus(campaign.status),
-    audience: `${campaign.recipientCount} recipients`,
-    nextAction:
-      campaign.status === "DRAFT"
-        ? "Finalize the send mode and launch this campaign."
-        : campaign.status === "SCHEDULED"
-          ? "Wait for the scheduled dispatch window."
-          : campaign.status === "FAILED"
-            ? "Inspect failed mailings and retry the campaign."
-            : "Monitor provider sync and delivery updates.",
-    scheduledAt: campaign.scheduledAt?.toISOString() ?? null,
-    templateName: campaign.template.name,
-    deliverySummary: `${campaign.submittedCount} submitted · ${campaign.deliveredCount} delivered · ${campaign.failedCount} failed`,
-    totalPriceLabel: formatMoney(campaign.totalCents),
-  })) as CampaignBoardItem[];
+  return campaigns.map((campaign) => {
+    const playbook = getPostcardPlaybookByKey(campaign.playbookKey);
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      status: mapCampaignStatus(campaign.status),
+      audience: `${campaign.recipientCount} recipients`,
+      nextAction:
+        campaign.status === "DRAFT"
+          ? "Finalize the send mode and launch this campaign."
+          : campaign.status === "SCHEDULED"
+            ? "Wait for the scheduled dispatch window."
+            : campaign.status === "FAILED"
+              ? "Inspect failed mailings and retry the campaign."
+              : "Monitor provider sync and delivery updates.",
+      scheduledAt: campaign.scheduledAt?.toISOString() ?? null,
+      templateName: campaign.template.name,
+      playbookLabel: playbook?.label ?? null,
+      deliverySummary: `${campaign.submittedCount} submitted · ${campaign.deliveredCount} delivered · ${campaign.failedCount} failed`,
+      totalPriceLabel: formatMoney(campaign.totalCents),
+      landingSummary: campaign.landingUrl
+        ? `${campaign.qrLabel ?? "QR follow-up"} ready`
+        : null,
+    };
+  }) as CampaignBoardItem[];
 }
 
 export async function createDraftCampaign(input: {
@@ -82,6 +93,9 @@ export async function createDraftCampaign(input: {
   templateId: string;
   contactIds: string[];
   sendStrategy?: CampaignSendStrategy;
+  playbookKey?: string;
+  landingUrl?: string;
+  qrLabel?: string;
 }) {
   const template = await prisma.template.findFirst({
     where: {
@@ -107,6 +121,10 @@ export async function createDraftCampaign(input: {
     throw new Error("Select at least one contact before creating a campaign.");
   }
 
+  if (input.playbookKey && !input.landingUrl) {
+    throw new Error("Add a QR landing link so the postcard can prove value beyond the mailer.");
+  }
+
   const quote = quoteCampaign(template.sizeCode, contacts.length);
 
   return prisma.$transaction(async (tx) => {
@@ -115,6 +133,9 @@ export async function createDraftCampaign(input: {
         userId: input.userId,
         templateId: template.id,
         name: input.name,
+        playbookKey: input.playbookKey,
+        landingUrl: input.landingUrl,
+        qrLabel: input.qrLabel,
         status: CampaignStatus.DRAFT,
         sendStrategy: input.sendStrategy ?? "SEND_NOW",
         recipientCount: contacts.length,
